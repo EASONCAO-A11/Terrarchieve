@@ -59,7 +59,14 @@ mark{background:var(--gray);color:var(--black);padding:0 2px}
 /* windows */
 main{max-width:1240px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
   padding-block:24px calc(var(--keys-h) + 40px + env(safe-area-inset-bottom,0px))}
-/* transitions: every text module flashes twice and blinks out; new modules flash twice and stay (hard cuts, no fades) */
+/* transitions: frames (borders, bar fills) fade; text flashes.
+   enter: frame fades in first, then text flashes in.  exit: frame fades out while text flashes out. */
+.tx-in,.tx-in > .win-bar{animation:frIn .32s ease-out both}
+@keyframes frIn{from{border-color:transparent;background-color:transparent}}
+.tx-in > .win-bar > *,.tx-in > .win-body,.stage.tx-in > *{animation:flIn .84s steps(1,end) .32s both}
+.tx-out,.tx-out > .win-bar{animation:frOut .6s ease-in both}
+@keyframes frOut{to{border-color:transparent;background-color:transparent}}
+.tx-out > .win-bar > *,.tx-out > .win-body,.stage.tx-out > *{animation:flOut .84s steps(1,end) both}
 .fl-out{animation:flOut .84s steps(1,end) both;animation-delay:var(--d,0ms)}
 @keyframes flOut{0%{opacity:1}16.6%{opacity:0}33.3%{opacity:1}50%{opacity:0}66.6%{opacity:1}83.3%{opacity:0}100%{opacity:0}}
 .fl-in{animation:flIn .84s steps(1,end) both;animation-delay:var(--d,0ms)}
@@ -900,14 +907,14 @@ https://www.who.int/data/gho/data/indicators/indicator-details/…</small></span
   var fI=document.getElementById('fIndex'), fL=document.getElementById('fLoc');
   var kPrev=document.getElementById('kPrev'), kNext=document.getElementById('kNext'), kUp=document.getElementById('kUp');
   function go(id){ if(id) location.hash=id; }
-  var pending=null, FL=840;
+  var pending=null, FL=840, FR=320;
   function boxes(page){ return [].slice.call(page.querySelectorAll('.stage, .layout > .win, .rail > .win')); }
   function expand(list,el){ if(el.matches('.prose, ol.files, ul, ol.toc, ol.timeline, dl.data')){ [].forEach.call(el.children,function(c){ expand(list,c); }); } else list.push(el); }
   function mods(box){ if(box.classList.contains('stage')) return []; var list=[]; var bar=box.querySelector(':scope > .win-bar'); if(bar) list.push(bar);
     var body=box.querySelector(':scope > .win-body'); if(body) [].forEach.call(body.children,function(c){ expand(list,c); }); return list; }
   function inView(el){ var r=el.getBoundingClientRect(); return r.height>0 && r.bottom>0 && r.top<window.innerHeight; }
-  function fx(el,cls,delay){ el.classList.remove('fl-in','fl-out'); el.style.setProperty('--d',Math.round(delay)+'ms'); void el.offsetWidth; el.classList.add(cls); }
-  function clear(page){ boxes(page).forEach(function(bx){ bx.classList.remove('fl-in','fl-out'); mods(bx).forEach(function(m){ m.classList.remove('fl-in','fl-out'); }); }); }
+  function fx(el,cls,delay){ el.classList.remove('fl-in','fl-out','tx-in','tx-out'); el.style.setProperty('--d',Math.round(delay)+'ms'); void el.offsetWidth; el.classList.add(cls); }
+  function clear(page){ boxes(page).forEach(function(bx){ bx.classList.remove('fl-in','fl-out','tx-in','tx-out'); mods(bx).forEach(function(m){ m.classList.remove('fl-in','fl-out'); }); }); }
   function land(el,page){
     if(el && el!==page){ el.scrollIntoView(); el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash'); }
     else window.scrollTo(0,0);
@@ -922,8 +929,8 @@ https://www.who.int/data/gho/data/indicators/indicator-details/…</small></span
     kPrev.disabled=!page.getAttribute('data-prev'); kNext.disabled=!page.getAttribute('data-next'); kUp.disabled=!page.getAttribute('data-up');
     land(el,page);
     var bx=boxes(page).filter(inView);
-    bx.forEach(function(b){ fx(b,'fl-in',0); });
-    var done=FL+50;
+    bx.forEach(function(b){ fx(b,'tx-in',0); });
+    var done=FR+FL+50;
     pending={from:null,t:setTimeout(function(){ pending=null; clear(page); },done)};
   }
   function show(id){
@@ -934,7 +941,7 @@ https://www.who.int/data/gho/data/indicators/indicator-details/…</small></span
     if(page===cur){ land(el,page); return; }
     if(!cur){ enter(page,el); return; }
     var from=cur, bx=boxes(from).filter(inView);
-    bx.forEach(function(b){ fx(b,'fl-out',0); });
+    bx.forEach(function(b){ fx(b,'tx-out',0); });
     var total=bx.length?FL+20:0;
     pending={from:from,t:setTimeout(function(){ pending=null; clear(from); enter(page,el); },total)};
   }
