@@ -1014,7 +1014,7 @@ https://www.who.int/data/gho/data/indicators/indicator-details/…</small></span
   var GRAY=0xC0C0C0, TEAL=0x008080, EARTH_PERIOD=60; // seconds per泰拉 orbit at x1
 
   var renderer=new THREE.WebGLRenderer({antialias:true});
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,2)); renderer.setClearColor(0x000000,1);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,window.matchMedia('(max-width: 640px)').matches?1.5:2)); renderer.setClearColor(0x000000,1);
   wrap.appendChild(renderer.domElement);
   var scene=new THREE.Scene(), camera=new THREE.PerspectiveCamera(42,1,0.05,3000);
 
@@ -1154,7 +1154,7 @@ https://www.who.int/data/gho/data/indicators/indicator-details/…</small></span
 
   // ---------- input ----------
   var ptrs={}, moved=0, last=null, pinch0=null, el=renderer.domElement;
-  el.addEventListener('pointerdown',function(e){ el.setPointerCapture(e.pointerId); ptrs[e.pointerId]={x:e.clientX,y:e.clientY}; moved=0; last={x:e.clientX,y:e.clientY};
+  el.addEventListener('pointerdown',function(e){ if(e.isPrimary){ ptrs={}; pinch0=null; } try{el.setPointerCapture(e.pointerId);}catch(_){} ptrs[e.pointerId]={x:e.clientX,y:e.clientY}; moved=0; last={x:e.clientX,y:e.clientY};
     var ids=Object.keys(ptrs); if(ids.length===2){ var a=ptrs[ids[0]],b=ptrs[ids[1]]; pinch0={d:Math.hypot(a.x-b.x,a.y-b.y),dist:cam.dist}; } });
   el.addEventListener('pointermove',function(e){ if(!ptrs[e.pointerId]) return; ptrs[e.pointerId]={x:e.clientX,y:e.clientY}; var ids=Object.keys(ptrs);
     if(ids.length===2 && pinch0){ var a=ptrs[ids[0]],b=ptrs[ids[1]], d=Math.hypot(a.x-b.x,a.y-b.y); wantDist=clampDist(pinch0.dist*pinch0.d/Math.max(d,1)); moved+=10; return; }
@@ -1165,12 +1165,12 @@ https://www.who.int/data/gho/data/indicators/indicator-details/…</small></span
     if(tw){ tw.to.theta=null; tw.to.phi=null; }
     cam.theta-=dx*0.006; cam.phi=Math.min(1.5,Math.max(0.18,cam.phi-dy*0.005)); });
   function up(e){ var click=moved<6 && Object.keys(ptrs).length===1; delete ptrs[e.pointerId]; pinch0=null; if(click && e.type==='pointerup') pick(e); }
-  el.addEventListener('pointerup',up); el.addEventListener('pointercancel',up);
-  function clampDist(d){ return isM()?Math.min(40,Math.max(focused?1.6:6,d)):Math.min(160,Math.max(focused?1.4:6,d)); }
+  el.addEventListener('pointerup',up); el.addEventListener('pointercancel',up); el.addEventListener('lostpointercapture',function(e){ if(ptrs[e.pointerId]){ delete ptrs[e.pointerId]; pinch0=null; } });
+  function clampDist(d){ return isM()?Math.min(40,Math.max(focused?1.6:14,d)):Math.min(160,Math.max(focused?1.4:6,d)); }
   el.addEventListener('wheel',function(e){ e.preventDefault(); if(tw) return; wantDist=clampDist((wantDist||cam.dist)*(1+Math.sign(e.deltaY)*Math.min(Math.abs(e.deltaY),120)*0.0013)); },{passive:false});
   var ray=new THREE.Raycaster(), ndc=new THREE.Vector2();
   function pick(e){ var r=el.getBoundingClientRect(); ndc.set(((e.clientX-r.left)/r.width)*2-1, -((e.clientY-r.top)/r.height)*2+1); ray.setFromCamera(ndc,camera);
-    var hit=ray.intersectObjects(pickables,false)[0]; if(hit) focus(hit.object.userData.id); else if(focused && isM()) unfocus(); }
+    var hit=ray.intersectObjects(pickables,false)[0]; if(hit) focus(hit.object.userData.id); else if(focused && isM()) unfocus(); else if(isM() && Math.abs(cam.dist-MOV.dist)>1.5) startTween(overview(),0.9); }
 
   function size(){ var w=stage.clientWidth, h=stage.clientHeight; if(!w||!h) return; renderer.setSize(w,h,false); camera.aspect=w/h; camera.updateProjectionMatrix(); }
   if(window.ResizeObserver) new ResizeObserver(size).observe(stage); else window.addEventListener('resize',size); size();
